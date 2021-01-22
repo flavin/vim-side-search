@@ -105,10 +105,31 @@ function! s:append_guide() abort
 endfunction
 
 " Find the line number and file from current cursor position
+" and open the found location
+function! s:open_cursor_location(exec_after) abort
+  let is_first_number = matchstr(getline('.'), '\v^\d+')
+  if is_first_number
+    call s:open_cursor_location_heading(a:exec_after)
+  else
+    call s:open_cursor_location_noheading(a:exec_after)
+  endif
+endfunction
+
+" Find the line number and file from current cursor position
+" in a result with 'ag --noheading' or 'grep -n'
+function! s:open_cursor_location_noheading(exec_after) abort
+  let file_path_and_lnum = matchstr(getline('.'), '\v^(.*):\d+')
+  let file_path = matchstr(file_path_and_lnum, '\v[^:]*')
+  let lnum = matchstr(file_path_and_lnum, '\v\d+')
+  call s:open_location(file_path, lnum, a:exec_after)
+endfunction
+
+" Find the line number and file from current cursor position
+" with heading.
 " and open the found location using `open_largest`
 " Warning: This is highly targeted for `ag's` command output.
 "          If `ag` changes, this will surely break. Sorry.
-function! s:open_cursor_location(exec_after) abort
+function! s:open_cursor_location_heading(exec_after) abort
   " get digits from the beginning of the line
   let lnum = matchstr(getline('.'), '\v^\d+')
   if lnum
@@ -117,12 +138,19 @@ function! s:open_cursor_location(exec_after) abort
     let file_pos = search('\v^(\d+[:-]|--)@!.+$', 'bn')
     if file_pos
       let file_path = getline(file_pos)
-      call s:open_largest(file_path)
-      execute 'normal! ' . lnum . expand('Gzz')
-      execute 'normal! zv'
-      if a:exec_after != ''
-        execute a:exec_after
-      endif
+      call s:open_location(file_path, lnum, a:exec_after)
+    endif
+  endif
+endfunction
+
+" open the file in a specific line using `open_largest`
+function! s:open_location(file_path, line_num, exec_after) abort
+  if a:line_num && a:file_path != ''
+    call s:open_largest(a:file_path)
+    execute 'normal! ' . a:line_num. expand('Gzz')
+    execute 'normal! zv'
+    if a:exec_after != ''
+      execute a:exec_after
     endif
   endif
 endfunction
